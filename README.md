@@ -23,7 +23,7 @@ Firstly move to **/var** directory and clone the chef project
 	$ cd /var/chef/cookbooks
 	$ git clone https://github.com/jahrmando/librenms.git
 
-> You will should have root privilage to clone in **/var** directory
+> You will should have root privilege to clone in **/var** directory
 
 Run librenms cookbook
 

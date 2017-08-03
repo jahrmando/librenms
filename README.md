@@ -1,10 +1,11 @@
-# A chef recipe to deploy LibreNMS
+# A chef recipe to deploy [LibreNMS](http://www.librenms.org/)
 
-TODO: Instalation and configuration of LibreNMS
+TODO: Instalation and configuration of [LibreNMS](http://www.librenms.org/)
 
 - Only tested on Centos 7.x and RHEL
 - The web administration page is in port 8080 by default
 - Fully tested on SELinux. ___Your welcome ;)___
+- This recipe is based on installation tutorial [RHEL/CentOS + Nginx](http://docs.librenms.org/Installation/Installation-CentOS-7-Nginx/)
 
 ## Install chef
 
@@ -59,6 +60,6 @@ Tested on:
 
 # Extra steps
 
-Secure your MariaDB instalation, please execute this:
+Secure your MariaDB installation, please execute this:
 
 	$ mysql_secure_installation

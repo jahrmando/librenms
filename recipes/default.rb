@@ -64,6 +64,7 @@ template '/etc/php.d/myphp.ini' do
   source 'myphp.ini.erb'
   owner 'root'
   group 'root'
+  variables(:timezone => node['librenms']['phpini']['timezone'])
   mode '0644'
 end
 
@@ -82,28 +83,28 @@ end
 template '/etc/php-fpm.d/www-nginx.conf' do
   source 'www-nginx.conf.erb'
   owner 'root'
-  group 'root'
+  group 'nginx'
   mode '0644'
   notifies :restart, 'service[php-fpm]'
 end
 
-user 'librenms' do
-  action :create
-  comment 'Librenms User'
-  home '/opt/librenms'
-  shell '/bin/bash'
-  password '$1$TepOZh6R$ImOmJMK2Jr7pZXUusU.Sx1'
-end
+#user 'librenms' do
+#  action :create
+#  comment 'Librenms User'
+#  home '/opt/librenms'
+#  shell '/bin/bash'
+#  password '$1$TepOZh6R$ImOmJMK2Jr7pZXUusU.Sx1'
+#end
 
-bash 'add user groups' do
-  user 'root'
-  cwd '/tmp'
-  code <<-EOH
-  usermod -a -G librenms nginx && \
-  usermod -a -G librenms apache
-  EOH
-  not_if 'grep librenms /etc/group | grep -wP "nginx|apache"'
-end
+#bash 'add user groups' do
+#  user 'root'
+#  cwd '/tmp'
+#  code <<-EOH
+#  usermod -a -G librenms nginx && \
+#  usermod -a -G librenms apache
+#  EOH
+#  not_if 'grep librenms /etc/group | grep -wP "nginx|apache"'
+#end
 
 directory '/opt/librenms' do
   owner 'nginx'
@@ -141,7 +142,10 @@ template '/etc/nginx/conf.d/librenms.conf' do
   owner 'root'
   group 'root'
   mode '0644'
-  variables(:hostname => node['librenms']['hostname'])
+  variables(
+    :port => node['librenms']['port_service'],
+    :hostname => node['librenms']['hostname']
+    )
   notifies :restart, 'service[nginx]'
 end
 
@@ -173,15 +177,21 @@ bash 'open ports' do
   firewall-cmd --zone public --add-service http && \
   firewall-cmd --permanent --zone public --add-service http
   EOH
-  only_if 'which firewall-cmd'
+  only_if 'which firewall-cmd && firewall-cmd --state'
 end
 
-bash 'install something' do
+bash 'fix owner directory' do
   user 'root'
   cwd '/tmp'
   code <<-EOH
-  chown :nginx -R /var/lib/php/
+  chown nginx:nginx -R /var/lib/php
+  chown nginx:nginx -R /opt/librenms
   EOH
+end
+
+service 'snmpd' do
+  supports :status => true, :restart => true, :reload => true
+  action [:enable]
 end
 
 template '/etc/snmp/snmpd.conf' do
@@ -191,8 +201,10 @@ template '/etc/snmp/snmpd.conf' do
   mode '0644'
   variables(
     :randomstring => node['librenms']['snmp_random_string'],
-    :webmaster => node['librenms']['webmaster']
+    :webmaster => node['librenms']['webmaster'],
+    :hostname => node['librenms']['hostname']
     )
+  notifies :restart, 'service[snmpd]'
 end
 
 bash 'config snmp local' do
@@ -202,21 +214,53 @@ bash 'config snmp local' do
   curl -o /usr/bin/distro https://raw.githubusercontent.com/librenms/librenms-agent/master/snmp/distro && \
   chmod +x /usr/bin/distro
   EOH
-end
-
-service 'snmpd' do
-  supports :status => true, :restart => true, :reload => true
-  action [:restart, :enable]
+  notifies :restart, 'service[snmpd]'
+  not_if 'ls /usr/bin/distro'
 end
 
 execute 'create rotatelogs' do
   command 'cp misc/librenms.logrotate /etc/logrotate.d/librenms'
   cwd '/opt/librenms'
   action :run
+  not_if 'ls /etc/logrotate.d/librenms'
 end
 
 execute 'create cron task' do
   command 'cp librenms.nonroot.cron /etc/cron.d/librenms'
   cwd '/opt/librenms'
   action :run
+  not_if 'ls /etc/cron.d/librenms'
+end
+
+template '/opt/librenms/config.php' do
+  source 'config.php.erb'
+  owner 'nginx'
+  group 'nginx'
+  mode '0640'
+  variables(
+    :networks => node['librenms']['scanning_discovery'],
+    :hostname => node['librenms']['hostname'],
+    :port => node['librenms']['port_service'],
+    :db_pass => node['mariadb']['user_librenms']['password']
+    )
+end
+
+execute 'Build Database' do
+  command 'php build-base.php'
+  cwd '/opt/librenms'
+  user 'root'
+  action :run
+end
+
+execute 'Add user admin' do
+  action :run
+  command 'php adduser.php $LIBRE_USER $LIBRE_PASS 10 $LIBRE_MAIL'
+  cwd '/opt/librenms'
+  environment ({
+    'LIBRE_USER' => node['librenms']['user_admin'],
+    'LIBRE_PASS' => node['librenms']['user_pass'],
+    'LIBRE_MAIL' => node['librenms']['webmaster']
+    })
+  user 'root'
+  group 'root'
 end

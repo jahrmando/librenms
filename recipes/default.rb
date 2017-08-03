@@ -2,7 +2,7 @@
 # Cookbook:: librenms
 # Recipe:: default
 #
-# Copyright:: 2017, The Authors, All Rights Reserved.
+# Copyright:: 2017, Armando Uch, All Rights Reserved.
 
 package %w(mariadb-server mariadb epel-release)
 

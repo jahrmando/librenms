@@ -6,6 +6,7 @@ TODO: Instalation and configuration of [LibreNMS](http://www.librenms.org/)
 - The web administration page is in port 8080 by default
 - Fully tested on SELinux. ___Your welcome ;)___
 - This recipe is based on installation tutorial [RHEL/CentOS + Nginx](http://docs.librenms.org/Installation/Installation-CentOS-7-Nginx/)
+- Librenms __1.45v__
 
 ## Install chef
 
@@ -57,9 +58,14 @@ Yep, You can test it with [kitchen](http://kitchen.ci/).
 Tested on:
 
 - CentOS 7.3
+- CentOS 7.4
 
 # Extra steps
 
 Secure your MariaDB installation, please execute this:
 
 	$ mysql_secure_installation
+
+### Thank you for your support!
+
+[Buy me a Coffee!](https://www.paypal.me/ArmandoUch)
